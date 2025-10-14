@@ -23,62 +23,80 @@ function GroupForm({ onNext }) {
   };
 
   return (
-    <div className="bg-white p-5 my-5 rounded-lg shadow-md">
-      <h3 className="text-gray-700 mb-4 border-b-2 border-blue-500 pb-1">
-        Create Group
-      </h3>
+   <div className="bg-white p-6 my-6 rounded-xl shadow-lg max-w-md mx-auto">
+  <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+    Create New Group
+  </h3>
+
+  <div className="mb-5">
+    <label className="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
+    <input
+      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+      placeholder="Enter group name"
+      value={groupName}
+      onChange={(e) => setGroupName(e.target.value)}
+    />
+  </div>
+
+  <div className="mb-5">
+    <label className="block text-sm font-medium text-gray-700 mb-1">Add Members</label>
+    <div className="flex gap-2">
       <input
-        className="m-1 p-2.5 border border-gray-300 rounded text-base w-full box-border"
-        placeholder="Group Name"
-        value={groupName}
-        onChange={(e) => setGroupName(e.target.value)}
+        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+        placeholder="Enter member name"
+        value={newMember}
+        onChange={(e) => setNewMember(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            addMember();
+          }
+        }}
       />
-      <div>
-        <input
-          className="m-1 p-2.5 border border-gray-300 rounded text-base w-full box-border"
-          placeholder="Add Member Name"
-          value={newMember}
-          onChange={(e) => setNewMember(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              addMember();
-            }
-          }}
-        />
-        <button
-          className="bg-blue-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-blue-700"
-          onClick={addMember}
-        >
-          Add a person
-        </button>
-      </div>
-      <ul className="list-none p-0">
-        {members.map((member) => (
-          <li
-            key={member}
-            className="bg-gray-100 m-1 p-2.5 rounded border-l-4 border-blue-500 flex items-center"
-          >
-            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-2 text-sm font-semibold">
-              {member.charAt(0).toUpperCase()}
-            </div>
-            <span className="flex-1">{member}</span>
-            <button
-              className="bg-red-500 text-white border-none p-1 rounded cursor-pointer text-sm hover:bg-red-700"
-              onClick={() => removeMember(member)}
-            >
-              Remove
-            </button>
-          </li>
-        ))}
-      </ul>
       <button
-        className="bg-green-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-        onClick={handleNext}
-        disabled={!groupName.trim() || members.length === 0}
+        className="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
+        onClick={addMember}
       >
-        Next
+        Add
       </button>
     </div>
+  </div>
+
+  <div className="mb-6">
+    <h4 className="text-sm font-medium text-gray-700 mb-2">Group Members</h4>
+    <ul className="space-y-2">
+      {members.map((member) => (
+        <li
+          key={member}
+          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+        >
+          <div className="flex items-center">
+            <div className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm font-medium">
+              {member.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-gray-800 font-medium">{member}</span>
+          </div>
+          <button
+            className="text-red-500 hover:text-red-700 focus:outline-none"
+            onClick={() => removeMember(member)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <button
+    className="w-full bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+    onClick={handleNext}
+    disabled={!groupName.trim() || members.length === 0}
+  >
+    Create Group
+  </button>
+</div>
+
   );
 }
 
