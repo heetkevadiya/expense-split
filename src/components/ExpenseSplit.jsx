@@ -12,11 +12,15 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
   const [manualSplits, setManualSplits] = useState(() =>
     members.map((m) => ({ name: m, amount: "" }))
   );
+  const [percentageSplits, setPercentageSplits] = useState(() =>
+    members.map((m) => ({ name: m, percentage: "" }))
+  );
   const [error, setError] = useState("");
   const [expenses, setExpenses] = useState([]);
 
   useEffect(() => {
     setManualSplits(members.map((m) => ({ name: m, amount: "" })));
+    setPercentageSplits(members.map((m) => ({ name: m, percentage: "" })));
   }, [members]);
 
   const addExpenseToList = (amount, splitsToUse) => {
@@ -33,6 +37,7 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
     setPaidBy("");
     setSplits(members.map((m) => ({ name: m, selected: true })));
     setManualSplits(members.map((m) => ({ name: m, amount: "" })));
+    setPercentageSplits(members.map((m) => ({ name: m, percentage: "" })));
   };
 
   const handleEqualSplit = (amount) => {
@@ -68,6 +73,19 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
     addExpenseToList(amount, splitsToUse);
   };
 
+  const handlePercentageSplit = (amount) => {
+    const percentages = percentageSplits.map((p) => parseFloat(p.percentage) || 0);
+    const totalPercentage = percentages.reduce((sum, val) => sum + val, 0);
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+      setError("Percentage splits must sum to 100%");
+      return;
+    }
+    const splitsToUse = percentageSplits
+      .map((p) => ({ name: p.name, value: (parseFloat(p.percentage) || 0) / 100 * amount }))
+      .filter((s) => s.value > 0);
+    addExpenseToList(amount, splitsToUse);
+  };
+
   const addExpense = () => {
     if (!totalAmount || !description.trim()) {
       setError("Please enter amount and description");
@@ -84,8 +102,10 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
     }
     if (splitMode === "equal") {
       handleEqualSplit(amount);
-    } else {
+    } else if (splitMode === "manual") {
       handleManualSplit(amount);
+    } else if (splitMode === "percentage") {
+      handlePercentageSplit(amount);
     }
   };
 
@@ -141,6 +161,7 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
       >
         <option value="equal">Equal Split</option>
         <option value="manual">Manual Split</option>
+        <option value="percentage">Percentage Split</option>
       </select>
     </div>
 
@@ -169,7 +190,7 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
             ));
           })()}
         </div>
-      ) : (
+      ) : splitMode === "manual" ? (
         <div className="space-y-3">
           {manualSplits.map((s, i) => (
             <div key={s.name} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all">
@@ -180,6 +201,21 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
                 placeholder="₹0.00"
                 value={s.amount}
                 onChange={(e) => setManualSplits((prev) => prev.map((m, idx) => idx === i ? { ...m, amount: e.target.value } : m))}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {percentageSplits.map((s, i) => (
+            <div key={s.name} className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-all">
+              <span className="w-24 text-gray-800 font-medium">{s.name}:</span>
+              <input
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
+                type="number"
+                placeholder="0.00%"
+                value={s.percentage}
+                onChange={(e) => setPercentageSplits((prev) => prev.map((p, idx) => idx === i ? { ...p, percentage: e.target.value } : p))}
               />
             </div>
           ))}
