@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import "tailwindcss";
-import './App.css';
 import GroupForm from './components/GroupForm';
 import ExpenseSplit from './components/ExpenseSplit';
 import Settlement from './components/Settlement';
@@ -31,13 +29,13 @@ function App() {
   };
 
   return (
-    <div className="App">
-      <h1>Expense Splitter</h1>
+    <div className="max-w-4xl mx-auto p-5 font-sans bg-gradient-to-br from-gray-100 to-blue-100 min-h-screen rounded-lg shadow-xl">
+      <h1 className="text-center text-gray-800 mb-8 text-4xl font-bold drop-shadow-sm">Expense Splitter</h1>
       {currentView === 'group' && (
         <GroupForm onNext={handleGroupNext} />
       )}
       {currentView === 'expense' && group && (
-        <ExpenseSplit group={group} onBack={handleBackToGroup} onGoToBills={handleGoToBills} />
+        <ExpenseSplit group={group} onBack={handleBackToGroup} onGoToSettlements={handleGoToBills} />
       )}
       {currentView === 'bills' && group && (
         <Settlement bills={bills} members={group.members} onBack={handleBackToExpense} />

@@ -48,24 +48,26 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
   };
 
   return (
-    <div className="form-section">
-      <h3>{groupName} - Add Expense</h3>
+    <div className="bg-white p-5 my-5 rounded-lg shadow-md">
+      <h3 className="text-gray-700 mb-4 border-b-2 border-blue-500 pb-1">{groupName} - Add Expense</h3>
       <input
+        className="m-1 p-2.5 border border-gray-300 rounded text-base w-full box-border"
         type="number"
-        placeholder="Totazl Amount"
+        placeholder="Total Amount"
         value={totalAmount}
         onChange={(e) => setTotalAmount(e.target.value)}
       />
       <input
+        className="m-1 p-2.5 border border-gray-300 rounded text-base w-full box-border"
         type="text"
         placeholder="Description"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
       <div>
-        <label>
+        <label className="inline-block m-2.5 mr-0 font-normal">
           Paid By:
-          <select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+          <select className="m-1 p-2.5 border border-gray-300 rounded text-base w-full box-border" value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
             <option value="">Select Payer</option>
             {members.map((m) => (
               <option key={m} value={m}>
@@ -81,7 +83,7 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
           const amount = parseFloat(totalAmount) || 0;
           const splitValue = selectedCount > 0 ? amount / selectedCount : 0;
           return splits.map((s, i) => (
-            <div key={s.name} style={{ marginBottom: "8px" }}>
+            <div key={s.name} className="mb-2">
               <label>
                 <input
                   type="checkbox"
@@ -97,7 +99,7 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
                 {s.name}
               </label>
               {s.selected && (
-                <span style={{ marginLeft: "10px" }}>
+                <span className="ml-2.5">
                   ₹{splitValue.toFixed(2)}
                 </span>
               )}
@@ -105,14 +107,14 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
           ));
         })()}
       </div>
-      {error && <p className="error">{error}</p>}
-      <button onClick={addExpense}>Add Expense</button>
+      {error && <p className="text-red-500 font-bold mt-2.5">{error}</p>}
+      <button className="bg-blue-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-blue-700" onClick={addExpense}>Add Expense</button>
       {expenses.length > 0 && (
-        <div className="display-section" style={{ marginTop: "20px" }}>
-          <h4>Expenses</h4>
-          <ul>
+        <div className="bg-white p-5 mt-5 rounded-lg shadow-md">
+          <h4 className="text-gray-700 mb-4 border-b-2 border-blue-500 pb-1">Expenses</h4>
+          <ul className="list-none p-0">
             {expenses.map((exp, i) => (
-              <li key={i}>
+              <li key={i} className="bg-gray-100 m-1 p-2.5 rounded border-l-4 border-blue-500">
                 {exp.description}: ₹{exp.amount.toFixed(2)} paid by {exp.paidBy}
                 , split among{" "}
                 {exp.splits
@@ -121,12 +123,12 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
               </li>
             ))}
           </ul>
-          <button onClick={() => onGoToSettlements(expenses)}>
+          <button className="bg-blue-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-blue-700" onClick={() => onGoToSettlements(expenses)}>
             Go to Settlements
           </button>
         </div>
       )}
-      <button onClick={onBack} style={{ marginTop: "20px" }}>
+      <button className="bg-blue-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-blue-700 mt-5" onClick={onBack}>
         Back to Group
       </button>
     </div>
