@@ -52,7 +52,7 @@ function ExpenseSplit({ group, onBack, onGoToSettlements }) {
       <h3>{groupName} - Add Expense</h3>
       <input
         type="number"
-        placeholder="Total Amount"
+        placeholder="Totazl Amount"
         value={totalAmount}
         onChange={(e) => setTotalAmount(e.target.value)}
       />
