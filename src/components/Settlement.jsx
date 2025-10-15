@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 function Settlement({ bills, members, onBack }) {
   const [settlements, setSettlements] = useState([]);
@@ -44,17 +44,27 @@ function Settlement({ bills, members, onBack }) {
 
   return (
     <div className="bg-white p-5 my-5 rounded-lg shadow-md">
-      <h2 className="text-gray-700 mb-4 border-b-2 border-blue-500 pb-1">Overall Settlements</h2>
+      <h2 className="text-gray-700 mb-4 border-b-2 border-blue-500 pb-1">
+        Overall Settlements
+      </h2>
       {settlements.length > 0 && (
         <ul className="list-none p-0">
           {settlements.map((s, i) => (
-            <li key={i} className="bg-gray-100 m-1 p-2.5 rounded border-l-4 border-blue-500">
+            <li
+              key={i}
+              className="bg-gray-100 m-1 p-2.5 rounded border-l-4 border-blue-500"
+            >
               {s.from} pays ₹{s.amount} to {s.to}
             </li>
           ))}
         </ul>
       )}
-      <button className="bg-blue-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-blue-700 mt-5" onClick={onBack}>Back</button>
+      <button
+        className="bg-blue-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-blue-700 mt-5"
+        onClick={onBack}
+      >
+        Back
+      </button>
     </div>
   );
 }
