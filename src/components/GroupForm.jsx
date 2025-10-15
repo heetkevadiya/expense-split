@@ -24,14 +24,14 @@ function GroupForm({ onNext, group }) {
 
   return (
    <div className="bg-white p-6 my-6 rounded-xl shadow-lg max-w-md mx-auto">
-  <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+  <h3 className="text-xl font-semibold text-black-800 mb-6 pb-2 border-b border-black-200">
     {group ? 'View Group' : 'Create New Group'}
   </h3>
 
   <div className="mb-5">
-    <label className="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
+    <label className="block text-sm font-medium text-black-700 mb-1">Group Name</label>
     <input
-      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+      className="w-full px-4 py-2.5 border border-black-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
       placeholder="Enter group name"
       value={groupName}
       onChange={(e) => setGroupName(e.target.value)}
@@ -41,10 +41,10 @@ function GroupForm({ onNext, group }) {
 
   {!group && (
     <div className="mb-5">
-      <label className="block text-sm font-medium text-gray-700 mb-1">Add Members</label>
+      <label className="block text-sm font-medium text-black-700 mb-1">Add Members</label>
       <div className="flex gap-2">
         <input
-          className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+          className="flex-1 px-4 py-2.5 border border-black-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
           placeholder="Enter member name"
           value={newMember}
           onChange={(e) => setNewMember(e.target.value)}
@@ -55,7 +55,7 @@ function GroupForm({ onNext, group }) {
           }}
         />
         <button
-          className="bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
+          className="bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all"
           onClick={addMember}
         >
           Add
@@ -65,18 +65,18 @@ function GroupForm({ onNext, group }) {
   )}
 
   <div className="mb-6">
-    <h4 className="text-sm font-medium text-gray-700 mb-2">Group Members</h4>
+    <h4 className="text-sm font-medium text-black-700 mb-2">Group Members</h4>
     <ul className="space-y-2">
       {members.map((member) => (
         <li
           key={member}
-          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+          className="flex items-center justify-between p-3 bg-black-50 rounded-lg border border-black-200"
         >
           <div className="flex items-center">
-            <div className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm font-medium">
+            <div className="w-9 h-9 bg-indigo-600 text-white rounded-full flex items-center justify-center mr-3 text-sm font-medium">
               {member.charAt(0).toUpperCase()}
             </div>
-            <span className="text-gray-800 font-medium">{member}</span>
+            <span className="text-black-800 font-medium">{member}</span>
           </div>
           {!group && (
             <button
