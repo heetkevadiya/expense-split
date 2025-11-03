@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from "react";
-import GroupForm from "./components/GroupForm";
+import CreateGroup from "./components/CreateGroup";
 import ExpenseSplit from "./components/ExpenseSplit";
 import Settlement from "./components/Settlement";
 
 function App() {
+  const [members, setMembers] = useState([]);
+  const [currentMember, setCurrentMember] = useState(() => {
+    const saved = localStorage.getItem("currentMember");
+    return saved ? JSON.parse(saved) : null;
+  });
   const [group, setGroup] = useState(() => {
     const saved = localStorage.getItem("group");
     return saved ? JSON.parse(saved) : null;
@@ -12,9 +17,11 @@ function App() {
     const saved = localStorage.getItem("bills");
     return saved ? JSON.parse(saved) : [];
   });
+  const [expenses, setExpenses] = useState([]);
+  const [memberGroups, setMemberGroups] = useState([]);
   const [currentView, setCurrentView] = useState(() => {
     const saved = localStorage.getItem("currentView");
-    return saved || "group";
+    return saved || (currentMember ? "selectGroup" : "login");
   });
 
   useEffect(() => {
@@ -29,13 +36,52 @@ function App() {
     localStorage.setItem("currentView", currentView);
   }, [currentView]);
 
-  const handleGroupNext = (groupData) => {
-    setGroup(groupData);
-    setCurrentView("expense");
+  useEffect(() => {
+    localStorage.setItem("currentMember", JSON.stringify(currentMember));
+  }, [currentMember]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, []);
+
+  const fetchMembers = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/member");
+      const data = await response.json();
+      setMembers(data);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+    }
+  };
+
+  const handleLogin = async (selectedMember) => {
+    setCurrentMember(selectedMember);
+    await fetchMemberGroups(selectedMember.id);
+    setCurrentView("selectGroup");
+  };
+
+  const fetchMemberGroups = async (memberId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/member/${memberId}/groups`);
+      const data = await response.json();
+      setMemberGroups(data.groups);
+    } catch (error) {
+      console.error("Error fetching member groups:", error);
+    }
+  };
+
+  const fetchExpenses = async (groupId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/expense/${groupId}`);
+      const data = await response.json();
+      setExpenses(data.expenses);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+    }
   };
 
   const handleBackToGroup = () => {
-    setCurrentView("group");
+    setCurrentView("selectGroup");
   };
 
   const handleGoToBills = (billData) => {
@@ -47,15 +93,32 @@ function App() {
     setCurrentView("expense");
   };
 
-  const handleAddExpense = (newExpense) => {
-    setBills([...bills, newExpense]);
+  const handleAddExpense = async (newExpense) => {
+    try {
+      const response = await fetch(`http://localhost:5000/expense/${group.groupId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newExpense),
+      });
+      if (response.ok) {
+        await fetchExpenses(group.groupId);
+        setBills([...bills, newExpense]);
+      } else {
+        console.error('Failed to add expense');
+      }
+    } catch (error) {
+      console.error('Error adding expense:', error);
+    }
   };
 
   const handleReset = () => {
     localStorage.clear();
     setGroup(null);
     setBills([]);
-    setCurrentView("group");
+    setCurrentMember(null);
+    setCurrentView("login");
   };
 
   return (
@@ -71,15 +134,87 @@ function App() {
           Reset All Data
         </button>
       </div>
-      {currentView === "group" && (
-        <GroupForm onNext={handleGroupNext} group={group} />
+      {currentView === "login" && (
+        <div className="bg-white p-6 my-6 rounded-xl shadow-lg max-w-md mx-auto">
+          <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+            Login
+          </h3>
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Member</label>
+            <select
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              onChange={(e) => {
+                const selectedId = e.target.value;
+                const selectedMember = members.find(m => m.id == selectedId);
+                if (selectedMember) handleLogin(selectedMember);
+              }}
+            >
+              <option value="">Select a member</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+      {currentView === "selectGroup" && (
+        <div className="bg-white p-6 my-6 rounded-xl shadow-lg max-w-md mx-auto">
+          <h3 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+            Select Group
+          </h3>
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Group</label>
+            <select
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+              onChange={async (e) => {
+                const selectedId = e.target.value;
+                if (selectedId) {
+                  const selectedGroup = memberGroups.find(g => g.id == selectedId);
+                  if (selectedGroup) {
+                    const response = await fetch(`http://localhost:5000/groupmember/${selectedId}`);
+                    const groupData = await response.json();
+                    setGroup({
+                      groupId: selectedId,
+                      groupName: selectedGroup.name,
+                      members: groupData.members
+                    });
+                    await fetchExpenses(selectedId);
+                    setCurrentView("expense");
+                  }
+                }
+              }}
+            >
+              <option value="">Select a group</option>
+              {memberGroups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="w-full bg-green-600 text-white py-2.5 rounded-lg font-medium hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all"
+            onClick={() => setCurrentView("createGroup")}
+          >
+            Create New Group
+          </button>
+        </div>
+      )}
+      {currentView === "createGroup" && (
+        <CreateGroup
+          onBack={() => setCurrentView("selectGroup")}
+          onGroupCreated={() => fetchMemberGroups(currentMember.id)}
+          members={members}
+        />
       )}
       {currentView === "expense" && group && (
         <ExpenseSplit
           group={group}
           onBack={handleBackToGroup}
           onGoToSettlements={handleGoToBills}
-          expenses={bills}
+          expenses={expenses}
           onAddExpense={handleAddExpense}
         />
       )}
