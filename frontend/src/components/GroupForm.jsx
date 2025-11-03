@@ -10,7 +10,7 @@ function GroupForm({ onNext, group, members }) {
     } else {
       setSelectedMembers([...selectedMembers, member]);
     }
-  };
+  }
 
   const handleNext = () => {
     if (groupName.trim() && selectedMembers.length > 0) {
