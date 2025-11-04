@@ -85,7 +85,7 @@ function App() {
   };
 
   const handleGoToBills = (billData) => {
-    setBills(billData);
+    setBills(expenses);
     setCurrentView("bills");
   };
 
@@ -223,6 +223,7 @@ function App() {
           bills={bills}
           members={group.members}
           onBack={handleBackToExpense}
+          groupId={group.groupId}
         />
       )}
     </div>
