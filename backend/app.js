@@ -2,12 +2,18 @@ import express from "express"
 import cors from "cors";
 import Usercontroller from "./usercontroller/usercontroller.js"
 import "./Association.js"
-
+import cors from "cors";
 const app=express()
 
 app.use(cors({
-  origin: "http://localhost:3000"
+  origin: [
+    "http://localhost:3000", 
+    "https://expense-split-8jj5-git-main-heet-kevadiyas-projects.vercel.app"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
 }));
+
 app.use(express.json());
 
 app.get("/member",Usercontroller.Member)
