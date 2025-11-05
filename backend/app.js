@@ -17,7 +17,6 @@ app.get("/expense/:groupId", Usercontroller.Expense);
 app.get("/expensesplit/:expenseId", Usercontroller.ExpenseSplit);
 app.get("/member/:memberId/groups", Usercontroller.MemberGroups);
 app.get("/settlement/:groupId", Usercontroller.GetSettlements);
-app.get("/group/:groupId/balances", Usercontroller.GroupBalance);
 
 app.post("/group", Usercontroller.CreateGroup);
 app.post("/expense/:groupId", Usercontroller.CreateExpense);

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 function Settlement({ bills, members, onBack, groupId }) {
   const [settlements, setSettlements] = useState([]);
   const [existingSettlements, setExistingSettlements] = useState([]);
+  const [history, setHistory] = useState([]);
   const [paying, setPaying] = useState(null);
 
   useEffect(() => {
@@ -10,8 +11,10 @@ function Settlement({ bills, members, onBack, groupId }) {
   }, [groupId]);
 
   useEffect(() => {
-    calculateOverallSettlements();
-  }, [bills, members, existingSettlements]);
+    if (members.length && bills.length) {
+      calculateOverallSettlements();
+    }
+  }, [bills, members, existingSettlements.length]);
 
   const fetchSettlements = async () => {
     try {
@@ -21,6 +24,11 @@ function Settlement({ bills, members, onBack, groupId }) {
       if (response.ok) {
         const data = await response.json();
         setExistingSettlements(data.settlements);
+        // Filter and sort paid settlements for history
+        const paidSettlements = data.settlements
+          .filter((s) => s.status === "paid")
+          .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        setHistory(paidSettlements);
       } else {
         console.error("Failed to fetch settlements");
       }
@@ -43,8 +51,8 @@ function Settlement({ bills, members, onBack, groupId }) {
     existingSettlements
       .filter((s) => s.status === "paid")
       .forEach((settlement) => {
-        balances[settlement.payer_name] -= parseFloat(settlement.amount);
-        balances[settlement.receiver_name] += parseFloat(settlement.amount);
+        balances[settlement.payer_name] += parseFloat(settlement.amount);
+        balances[settlement.receiver_name] -= parseFloat(settlement.amount);
       });
 
     const positive = [];
@@ -158,6 +166,28 @@ function Settlement({ bills, members, onBack, groupId }) {
             </li>
           ))}
         </ul>
+      )}
+      <h2 className="text-gray-700 mb-4 border-b-2 border-indigo-500 pb-1 mt-8">
+        Settlement History
+      </h2>
+      {history.length > 0 ? (
+        <ul className="list-none p-0">
+          {history.map((h) => (
+            <li
+              key={h.id}
+              className="bg-gray-50 m-1 p-2.5 rounded border-l-4 border-green-500 flex justify-between items-center"
+            >
+              <span>
+                {h.payer_name} paid ₹{h.amount} to {h.receiver_name}
+              </span>
+              <span className="text-sm text-gray-500">
+                {new Date(h.updated_at).toLocaleDateString()} {new Date(h.updated_at).toLocaleTimeString()}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-gray-500">No settlement history available.</p>
       )}
       <button
         className="bg-indigo-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-indigo-700 mt-5"

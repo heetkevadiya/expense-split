@@ -267,7 +267,7 @@ const GetSettlements = async (req, res) => {
   }
 };
 
-// Create or update a settlement (mark as paid)
+
 const CreateSettlement = async (req, res) => {
   try {
     const { groupId } = req.params;
@@ -334,66 +334,7 @@ const CreateSettlement = async (req, res) => {
   }
 };
 
-const GroupBalance = async (req, res) => {
-  try {
-    const { groupId } = req.params;
 
-    const expenses = await ExpenseModel.findAll({
-      where: { group_id: groupId },
-      include: [
-        {
-          model: ExpensesplitModel,
-        },
-      ],
-    });
-    const settlements = await SettlementModel.findAll({
-      where: { group_id: groupId },
-    });
-
-    const balances = {};
-    expenses.forEach((exp) => {
-      //credit to payer
-      if (!balances[exp.paid_by]) balances[exp.paid_by] = 0;
-      balances[exp.paid_by] += parseFloat(exp.amount);
-      //debit to each member
-      exp.expenseSplits.forEach((s) => {
-        if (!balances[s.member_id]) balances[s.member_id] = 0;
-        balances[s.member_id] -= parseFloat(s.amount);
-      });
-    });
-    //settlement - only consider paid settlements
-    settlements.forEach((s) => {
-      if (s.status === "paid") {
-        if (!balances[s.from_member_id]) balances[s.from_member_id] = 0;
-        if (!balances[s.to_member_id]) balances[s.to_member_id] = 0;
-        balances[s.from_member_id] -= parseFloat(s.amount);
-        balances[s.to_member_id] += parseFloat(s.amount);
-      }
-    });
-
-    const memberIds = Object.keys(balances);
-    const members = await MemberModel.findAll({
-      where: { id: memberIds },
-      attributes: ["id", "name"],
-    });
-
-    const balanceData = {
-      
-      group_id: groupId,
-      members: members.map((m) => ({
-        id: m.id,
-        name: m.name,
-        balance: parseFloat(balances[m.id] || 0).toFixed(2),
-        status:
-          balances[m.id] > 0 ? "gets" : balances[m.id] < 0 ? "owes" : "settled",
-      })),
-    };
-
-    res.status(200).json(balanceData);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-};
 
 export default {
   Member,
@@ -405,6 +346,5 @@ export default {
   CreateGroup,
   CreateExpense,
   GetSettlements,
-  CreateSettlement,
-  GroupBalance
+  CreateSettlement
 };
