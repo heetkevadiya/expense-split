@@ -2,7 +2,6 @@ import express from "express"
 import cors from "cors";
 import Usercontroller from "./usercontroller/usercontroller.js"
 import "./Association.js"
-import cors from "cors";
 const app=express()
 
 app.use(cors({
