@@ -5,6 +5,7 @@ import GroupModel from "../model/group.js";
 import GroupmemberModel from "../model/group member.js";
 import ExpenseModel from "../model/expense.js";
 import ExpensesplitModel from "../model/expense split.js";
+import SettlementModel from "../model/settlment.js";
 
 const model = dbconfig.Sequelize.Model;
 const sequelize = dbconfig.sequelizeTZ;
@@ -64,16 +65,13 @@ const Expense = async (req, res) => {
     include: [
       {
         model: MemberModel,
-        as: "payer",
         attributes: ["id", "name"],
       },
       {
         model: ExpensesplitModel,
-        as: "expenseSplits",
         include: [
           {
             model: MemberModel,
-            as: "member",
             attributes: ["id", "name"],
           },
         ],
@@ -89,10 +87,10 @@ const Expense = async (req, res) => {
       description: e.description,
       amount: e.amount,
       split_type: e.split_type,
-      paid_by: e.payer ? e.payer.name : null,
+      paid_by: e.Member ? e.Member.name : null,
       created_at: e.created_at,
-      splits: e.expenseSplits.map((s) => ({
-        member_name: s.member.name,
+      splits: e.ExpenseSplits.map((s) => ({
+        member_name: s.Member.name,
         amount: s.amount,
       })),
     })),
@@ -110,7 +108,6 @@ const ExpenseSplit = async (req, res) => {
       include: [
         {
           model: MemberModel,
-          as: "member",
           attributes: ["id", "name"],
         },
       ],
@@ -121,7 +118,7 @@ const ExpenseSplit = async (req, res) => {
       splits: result.map((s) => ({
         id: s.id,
         member_id: s.member_id,
-        member_name: s.member ? s.member.name : null,
+        member_name: s.Member ? s.Member.name : null,
         amount: s.amount,
       })),
     };
@@ -195,8 +192,14 @@ const CreateExpense = async (req, res) => {
     const { groupId } = req.params;
     const { description, amount, paid_by, splits } = req.body;
 
-    if (!description || !amount || !paid_by || !splits || !Array.isArray(splits)) {
-      return res.status(400).json({ error: 'All fields are required' });
+    if (
+      !description ||
+      !amount ||
+      !paid_by ||
+      !splits ||
+      !Array.isArray(splits)
+    ) {
+      return res.status(400).json({ error: "All fields are required" });
     }
 
     const newExpense = await ExpenseModel.create({
@@ -204,22 +207,134 @@ const CreateExpense = async (req, res) => {
       description,
       amount,
       paid_by,
-      split_type: 'manual'
+      split_type: "manual",
     });
 
     for (const split of splits) {
       await ExpensesplitModel.create({
         expense_id: newExpense.id,
         member_id: split.member_id,
-        amount: split.amount
+        amount: split.amount,
       });
     }
 
-    res.status(201).json({ message: 'Expense created successfully', expense: newExpense });
+    res
+      .status(201)
+      .json({ message: "Expense created successfully", expense: newExpense });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 };
+
+const GetSettlements = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    let result = await SettlementModel.findAll({
+      where: { group_id: groupId },
+      include: [
+        {
+          model: MemberModel,
+          as: "fromMember",
+          attributes: ["id", "name"],
+        },
+        {
+          model: MemberModel,
+          as: "toMember",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    const settlementData = {
+      group_id: groupId,
+      settlements: result.map((s) => ({
+        id: s.id,
+        from_member_id: s.from_member_id,
+        payer_name: s.fromMember ? s.fromMember.name : null,
+        to_member_id: s.to_member_id,
+        receiver_name: s.toMember ? s.toMember.name : null,
+        amount: s.amount,
+        status: s.status,
+        created_at: s.created_at,
+        updated_at: s.updated_at,
+      })),
+    };
+
+    res.status(200).json(settlementData);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+
+const CreateSettlement = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { from_member_id, to_member_id, amount } = req.body;
+
+    if (!from_member_id || !to_member_id || !amount) {
+      return res
+        .status(400)
+        .json({ error: "from_member_id, to_member_id, and amount are required" });
+    }
+
+    // Check if already paid settlement exists
+    const existingPaid = await SettlementModel.findOne({
+      where: {
+        group_id: groupId,
+        from_member_id,
+        to_member_id,
+        amount,
+        status: "paid",
+      },
+    });
+
+    if (existingPaid) {
+      return res.status(400).json({ error: "Settlement already paid" });
+    }
+
+    // Check if there is a pending settlement
+    const pendingSettlement = await SettlementModel.findOne({
+      where: {
+        group_id: groupId,
+        from_member_id,
+        to_member_id,
+        amount,
+        status: "pending",
+      },
+    });
+
+    if (pendingSettlement) {
+      pendingSettlement.status = "paid";
+      pendingSettlement.updated_at = new Date();
+      await pendingSettlement.save();
+
+      return res.status(200).json({
+        message: "Settlement updated successfully",
+        settlement: pendingSettlement,
+      });
+    }
+
+    // Create new settlement record (paid directly)
+    const newSettlement = await SettlementModel.create({
+      group_id: groupId,
+      from_member_id,
+      to_member_id,
+      amount,
+      status: "paid",
+    });
+
+    res.status(201).json({
+      message: "Settlement recorded successfully",
+      settlement: newSettlement,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+};
+
+
 
 export default {
   Member,
@@ -230,4 +345,6 @@ export default {
   MemberGroups,
   CreateGroup,
   CreateExpense,
+  GetSettlements,
+  CreateSettlement
 };

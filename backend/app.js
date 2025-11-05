@@ -16,11 +16,22 @@ app.get('/groupmember/:groupId', Usercontroller.Groupmember);
 app.get("/expense/:groupId", Usercontroller.Expense);
 app.get("/expensesplit/:expenseId", Usercontroller.ExpenseSplit);
 app.get("/member/:memberId/groups", Usercontroller.MemberGroups);
+app.get("/settlement/:groupId", Usercontroller.GetSettlements);
+
 app.post("/group", Usercontroller.CreateGroup);
 app.post("/expense/:groupId", Usercontroller.CreateExpense);
-
-
+app.post("/settlement/:groupId", Usercontroller.CreateSettlement);
 
 app.listen(5000,()=>{
     console.log("server is running at http://localhost:5000")
 })
+
+// import connection from "./config/cofig.js";
+// (async () => {
+//   try {
+//     await connection.sequelizeTZ.authenticate();
+//     console.log("✅ Connected to Supabase PostgreSQL successfully!");
+//   } catch (error) {
+//     console.error("❌ Unable to connect to Supabase:", error);
+//   }
+// })();
