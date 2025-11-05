@@ -80,45 +80,46 @@ function Settlement({ bills, members, onBack, groupId }) {
     setSettlements(newSettlements);
   };
 
-  const handlePay = async (from, to, amount) => {
-    if (paying) return; // Prevent multiple clicks
-    setPaying(true);
+  const paySettlement = async (from, to, amount) => {
     const fromMember = members.find((m) => m.name === from);
     const toMember = members.find((m) => m.name === to);
     if (!fromMember || !toMember) {
-      setPaying(false);
-      return;
+      throw new Error("Member not found");
     }
 
-    try {
-      const response = await fetch(
-        `http://localhost:5000/settlement/${groupId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from_member_id: fromMember.id,
-            to_member_id: toMember.id,
-            amount: parseFloat(amount),
-          }),
-        }
-      );
-      if (response.ok) {
-        alert(
-          `Payment of ₹${amount} from ${from} to ${to} recorded successfully!`
-        );
-        fetchSettlements(); // Refresh settlements after payment
-      } else {
-        const errorData = await response.json();
-        alert(
-          `Failed to record payment: ${errorData.error || "Unknown error"}`
-        );
+    const response = await fetch(
+      `http://localhost:5000/settlement/${groupId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from_member_id: fromMember.id,
+          to_member_id: toMember.id,
+          amount: parseFloat(amount),
+        }),
       }
+    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Unknown error");
+    }
+    return response;
+  };
+
+  const handlePay = async (from, to, amount) => {
+    if (paying) return;
+    setPaying(true);
+    try {
+      await paySettlement(from, to, amount);
+      alert(
+        `Payment of ₹${amount} from ${from} to ${to} recorded successfully!`
+      );
+      fetchSettlements(); // Refresh settlements after payment
     } catch (error) {
       console.error("Error recording payment:", error);
-      alert("Error recording payment");
+      alert(`Failed to record payment: ${error.message}`);
     } finally {
       setPaying(false);
     }
