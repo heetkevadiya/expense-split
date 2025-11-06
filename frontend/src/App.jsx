@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import CreateGroup from "./components/CreateGroup";
 import ExpenseSplit from "./components/ExpenseSplit";
 import Settlement from "./components/Settlement";
-import { supabase } from "./supabaseClient";
 
 function App() {
   const [members, setMembers] = useState([]);
@@ -47,8 +46,8 @@ function App() {
 
   const fetchMembers = async () => {
     try {
-      const { data, error } = await supabase.from('members').select('*');
-      if (error) throw error;
+      const response = await fetch("http://localhost:5000/member");
+      const data = await response.json();
       setMembers(data);
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -63,9 +62,9 @@ function App() {
 
   const fetchMemberGroups = async (memberId) => {
     try {
-      const { data, error } = await supabase.from('group_members').select('groups(*)').eq('member_id', memberId);
-      if (error) throw error;
-      setMemberGroups(data.map(item => item.groups));
+      const response = await fetch(`http://localhost:5000/member/${memberId}/groups`);
+      const data = await response.json();
+      setMemberGroups(data.groups);
     } catch (error) {
       console.error("Error fetching member groups:", error);
     }
@@ -73,9 +72,9 @@ function App() {
 
   const fetchExpenses = async (groupId) => {
     try {
-      const { data, error } = await supabase.from('expenses').select('*').eq('group_id', groupId);
-      if (error) throw error;
-      setExpenses(data);
+      const response = await fetch(`http://localhost:5000/expense/${groupId}`);
+      const data = await response.json();
+      setExpenses(data.expenses);
     } catch (error) {
       console.error("Error fetching expenses:", error);
     }
@@ -96,10 +95,19 @@ function App() {
 
   const handleAddExpense = async (newExpense) => {
     try {
-      const { data, error } = await supabase.from('expenses').insert([newExpense]);
-      if (error) throw error;
-      await fetchExpenses(group.groupId);
-      setBills([...bills, newExpense]);
+      const response = await fetch(`http://localhost:5000/expense/${group.groupId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newExpense),
+      });
+      if (response.ok) {
+        await fetchExpenses(group.groupId);
+        setBills([...bills, newExpense]);
+      } else {
+        console.error('Failed to add expense');
+      }
     } catch (error) {
       console.error('Error adding expense:', error);
     }
@@ -165,12 +173,12 @@ function App() {
                 if (selectedId) {
                   const selectedGroup = memberGroups.find(g => g.id == selectedId);
                   if (selectedGroup) {
-                    const { data: groupMembers, error } = await supabase.from('group_members').select('members(*)').eq('group_id', selectedId);
-                    if (error) throw error;
+                    const response = await fetch(`http://localhost:5000/groupmember/${selectedId}`);
+                    const groupData = await response.json();
                     setGroup({
                       groupId: selectedId,
                       groupName: selectedGroup.name,
-                      members: groupMembers.map(item => item.members)
+                      members: groupData.members
                     });
                     await fetchExpenses(selectedId);
                     setCurrentView("expense");
