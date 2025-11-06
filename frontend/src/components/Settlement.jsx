@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
 
 function Settlement({ bills, members, onBack, groupId }) {
   const [settlements, setSettlements] = useState([]);
   const [existingSettlements, setExistingSettlements] = useState([]);
   const [history, setHistory] = useState([]);
-  const [paying, setPaying] = useState(null);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     fetchSettlements();
@@ -16,43 +17,53 @@ function Settlement({ bills, members, onBack, groupId }) {
     }
   }, [bills, members, existingSettlements.length]);
 
+  // Fetch settlements from Supabase
   const fetchSettlements = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:5000/settlement/${groupId}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setExistingSettlements(data.settlements);
-        // Filter and sort paid settlements for history
-        const paidSettlements = data.settlements
-          .filter((s) => s.status === "paid")
-          .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-        setHistory(paidSettlements);
-      } else {
-        console.error("Failed to fetch settlements");
-      }
+      const { data, error } = await supabase
+        .from("settlements")
+        .select("*")
+        .eq("group_id", groupId);
+      if (error) throw error;
+
+      // Map member names
+      const formattedSettlements = data.map((s) => ({
+        ...s,
+        payer_name: members.find((m) => m.id === s.from_member_id)?.name || "Unknown",
+        receiver_name: members.find((m) => m.id === s.to_member_id)?.name || "Unknown",
+      }));
+
+      setExistingSettlements(formattedSettlements);
+
+      // Paid settlements for history
+      const paidSettlements = formattedSettlements
+        .filter((s) => s.status === "paid")
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+      setHistory(paidSettlements);
     } catch (error) {
       console.error("Error fetching settlements:", error);
     }
   };
 
+  // Calculate settlements based on bills and existing payments
   const calculateOverallSettlements = () => {
     const balances = {};
     members.forEach((m) => (balances[m.name] = 0));
+
     bills.forEach((exp) => {
       exp.splits.forEach((s) => {
         balances[s.member_name] -= parseFloat(s.amount);
       });
-      balances[exp.paid_by] += parseFloat(exp.amount);
+      const payerName = members.find((m) => m.id === exp.paid_by)?.name;
+      if (payerName) balances[payerName] += parseFloat(exp.amount);
     });
 
     // Adjust balances based on existing paid settlements
     existingSettlements
       .filter((s) => s.status === "paid")
-      .forEach((settlement) => {
-        balances[settlement.payer_name] += parseFloat(settlement.amount);
-        balances[settlement.receiver_name] -= parseFloat(settlement.amount);
+      .forEach((s) => {
+        balances[s.payer_name] += parseFloat(s.amount);
+        balances[s.receiver_name] -= parseFloat(s.amount);
       });
 
     const positive = [];
@@ -77,35 +88,30 @@ function Settlement({ bills, members, onBack, groupId }) {
       if (p.amount === 0) positive.shift();
       if (n.amount === 0) negative.shift();
     }
+
     setSettlements(newSettlements);
   };
 
+  // Record a payment in Supabase
   const paySettlement = async (from, to, amount) => {
     const fromMember = members.find((m) => m.name === from);
     const toMember = members.find((m) => m.name === to);
+
     if (!fromMember || !toMember) {
       throw new Error("Member not found");
     }
 
-    const response = await fetch(
-      `http://localhost:5000/settlement/${groupId}`,
+    const { error } = await supabase.from("settlements").insert([
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from_member_id: fromMember.id,
-          to_member_id: toMember.id,
-          amount: parseFloat(amount),
-        }),
-      }
-    );
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Unknown error");
-    }
-    return response;
+        group_id: groupId,
+        from_member_id: fromMember.id,
+        to_member_id: toMember.id,
+        amount: parseFloat(amount),
+        status: "paid",
+      },
+    ]);
+
+    if (error) throw error;
   };
 
   const handlePay = async (from, to, amount) => {
@@ -113,9 +119,7 @@ function Settlement({ bills, members, onBack, groupId }) {
     setPaying(true);
     try {
       await paySettlement(from, to, amount);
-      alert(
-        `Payment of ₹${amount} from ${from} to ${to} recorded successfully!`
-      );
+      alert(`Payment of ₹${amount} from ${from} to ${to} recorded successfully!`);
       fetchSettlements(); // Refresh settlements after payment
     } catch (error) {
       console.error("Error recording payment:", error);
@@ -130,7 +134,7 @@ function Settlement({ bills, members, onBack, groupId }) {
       <h2 className="text-gray-700 mb-4 border-b-2 border-indigo-500 pb-1">
         Overall Settlements
       </h2>
-      {settlements.length > 0 && (
+      {settlements.length > 0 ? (
         <ul className="list-none p-0">
           {settlements.map((s, i) => (
             <li
@@ -140,34 +144,20 @@ function Settlement({ bills, members, onBack, groupId }) {
               <span>
                 {s.from} pays ₹{s.amount} to {s.to}
               </span>
-              {(() => {
-                const isPaid = existingSettlements.some(
-                  (es) =>
-                    es.payer_name === s.from &&
-                    es.receiver_name === s.to &&
-                    es.status === "paid"
-                );
-                return isPaid ? (
-                  <button
-                    className="bg-gray-500 text-white px-3 py-1 rounded cursor-not-allowed"
-                    disabled
-                  >
-                    Paid
-                  </button>
-                ) : (
-                  <button
-                    className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors"
-                    onClick={() => handlePay(s.from, s.to, s.amount)}
-                    disabled={paying}
-                  >
-                    {paying ? "Processing..." : "Pay"}
-                  </button>
-                );
-              })()}
+              <button
+                className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors"
+                onClick={() => handlePay(s.from, s.to, s.amount)}
+                disabled={paying}
+              >
+                {paying ? "Processing..." : "Pay"}
+              </button>
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="text-gray-500">No settlements needed.</p>
       )}
+
       <h2 className="text-gray-700 mb-4 border-b-2 border-indigo-500 pb-1 mt-8">
         Settlement History
       </h2>
@@ -182,7 +172,8 @@ function Settlement({ bills, members, onBack, groupId }) {
                 {h.payer_name} paid ₹{h.amount} to {h.receiver_name}
               </span>
               <span className="text-sm text-gray-500">
-                {new Date(h.updated_at).toLocaleDateString()} {new Date(h.updated_at).toLocaleTimeString()}
+                {new Date(h.updated_at).toLocaleDateString()}{" "}
+                {new Date(h.updated_at).toLocaleTimeString()}
               </span>
             </li>
           ))}
@@ -190,6 +181,7 @@ function Settlement({ bills, members, onBack, groupId }) {
       ) : (
         <p className="text-gray-500">No settlement history available.</p>
       )}
+
       <button
         className="bg-indigo-500 text-white border-none p-2.5 rounded cursor-pointer text-base m-1 transition-colors hover:bg-indigo-700 mt-5"
         onClick={onBack}

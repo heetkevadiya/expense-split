@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { supabase } from "../supabaseClient";
 
 function CreateGroup({ onBack, onGroupCreated, members }) {
   const [groupName, setGroupName] = useState("");
@@ -24,26 +25,16 @@ function CreateGroup({ onBack, onGroupCreated, members }) {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/group", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: groupName.trim(),
-          members: selectedMembers,
-        }),
-      });
+      const { data: groupData, error: groupError } = await supabase.from('groups').insert([{ name: groupName.trim() }]).select();
+      if (groupError) throw groupError;
+      const groupId = groupData[0].id;
 
-      if (response.ok) {
-        const data = await response.json();
-        alert("Group created successfully!");
-        onGroupCreated();
-        onBack();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to create group");
-      }
+      const groupMembersData = selectedMembers.map(userId => ({ group_id: groupId, user_id: userId }));
+      const { error: membersError } = await supabase.from('group_members').insert(groupMembersData);
+      if (membersError) throw membersError;
+
+      onGroupCreated();
+      onBack();
     } catch (error) {
       console.error("Error creating group:", error);
       setError("An error occurred while creating the group");

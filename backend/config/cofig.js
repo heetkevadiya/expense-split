@@ -1,28 +1,24 @@
 import { Sequelize, Model, DataTypes } from "sequelize";
+import dotenv from "dotenv";
 
+dotenv.config(); 
 
-//✅ local postgresql connection
-let dbconfig = {
-    db_name: 'testdb',
-    db_user: 'postgres',
-    db_pass: 'HEETpatel2458.',
-    con_type: 'postgres',
-    port: 5432,
-    host: 'localhost'
-};
-
-const sequelizeTZ = new Sequelize(dbconfig.db_name, dbconfig.db_user, dbconfig.db_pass, {
-    host: dbconfig.host,
-    dialect: dbconfig.con_type ,
-    port: dbconfig.port,
+const sequelizeTZ = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USER,
+  process.env.DB_PASS,
+  {
+    host: process.env.DB_HOST,
+    dialect: process.env.DB_DIALECT,
+    port: process.env.DB_PORT,
     logging: true,
-    timezone: '+00:00'
-});
+    timezone: "+00:00",
+  }
+);
 
-
-// // ✅ Direct Supabase Database Connection
+// ✅ Direct Supabase Database Connection
 // const sequelizeTZ = new Sequelize(
-//   "postgresql://postgres:HEETpatel2458.@db.wyjhzpazssggwuoqcuom.supabase.co:5432/postgres",
+//   process.env.SUPABASE_DB_URL,
 //   {
 //     dialect: "postgres",
 //     dialectOptions: {
@@ -44,3 +40,4 @@ connection.Model = Model;
 connection.DataTypes = DataTypes;
 
 export default connection;
+

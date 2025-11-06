@@ -7,7 +7,7 @@ const app=express()
 app.use(cors({
   origin: [
     "http://localhost:3000", 
-    "https://expense-split-8jj5-git-main-heet-kevadiyas-projects.vercel.app"
+    "https://expense-split-ltivvy14o-heet-kevadiyas-projects.vercel.app"
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true

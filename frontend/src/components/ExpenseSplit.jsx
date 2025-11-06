@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { supabase } from "../supabaseClient";
 
 function ExpenseSplit({
   group,
@@ -8,7 +9,6 @@ function ExpenseSplit({
   onAddExpense,
 }) {
   const { groupName, members } = group;
-  const memberNames = members.map((m) => m.name);
   const [totalAmount, setTotalAmount] = useState("");
   const [description, setDescription] = useState("");
   const [paidBy, setPaidBy] = useState("");
@@ -33,23 +33,9 @@ function ExpenseSplit({
     setSharesSplits(members.map((m) => ({ name: m.name, shares: 0 })));
   }, [members]);
 
-  const addExpenseToList = (amount, splitsToUse) => {
-    setError("");
-    const newExpense = {
-      description: description.trim(),
-      amount: amount,
-      splits: splitsToUse,
-      paid_by: members.find((m) => m.name === paidBy).id,
-    };
-    onAddExpense(newExpense);
-    setTotalAmount("");
-    setDescription("");
-    setPaidBy("");
-    setSplits(members.map((m) => ({ name: m.name, selected: true })));
-    setManualSplits(members.map((m) => ({ name: m.name, amount: "" })));
-    setPercentageSplits(members.map((m) => ({ name: m.name, percentage: "" })));
-    setSharesSplits(members.map((m) => ({ name: m.name, shares: 0 })));
-  };
+
+
+
 
   const handleEqualSplit = (amount) => {
     const selectedSplits = splits.filter((s) => s.selected);
@@ -59,11 +45,6 @@ function ExpenseSplit({
       return [];
     }
     const splitValue = amount / selectedCount;
-    const totalSplit = splitValue * selectedCount;
-    if (Math.abs(amount - totalSplit) > 0) {
-      setError("Total split amount does not match total amount");
-      return [];
-    }
     return selectedSplits.map((s) => ({
       member_id: members.find((m) => m.name === s.name).id,
       amount: splitValue,
@@ -117,37 +98,87 @@ function ExpenseSplit({
       .filter((s) => s.amount > 0);
   };
 
-  const addExpense = async () => {
-    if (!totalAmount) {
-      setError("Please enter amount and description");
+ const addExpense = async () => {
+  try {
+    setError("");
+
+    if (!totalAmount || !description || !paidBy) {
+      setError("Please fill in all fields");
       return;
     }
+
     const amount = parseFloat(totalAmount);
     if (isNaN(amount) || amount <= 0) {
-      setError("Please enter a valid positive amount");
+      setError("Please enter a valid amount");
       return;
     }
-    if (!paidBy) {
-      setError("Please select who paid the expense");
+
+    const payerId = parseInt(paidBy, 10);
+    if (isNaN(payerId)) {
+      setError("Please select a valid payer");
       return;
     }
 
     let splitsToUse = [];
-    if (splitMode === "equal") {
-      splitsToUse = handleEqualSplit(amount);
-    } else if (splitMode === "manual") {
-      splitsToUse = handleManualSplit(amount);
-    } else if (splitMode === "percentage") {
-      splitsToUse = handlePercentageSplit(amount);
-    } else if (splitMode === "shares") {
-      splitsToUse = handleSharesSplit(amount);
+    if (splitMode === "equal") splitsToUse = handleEqualSplit(amount);
+    else if (splitMode === "manual") splitsToUse = handleManualSplit(amount);
+    else if (splitMode === "percentage") splitsToUse = handlePercentageSplit(amount);
+    else if (splitMode === "shares") splitsToUse = handleSharesSplit(amount);
+
+    if (!splitsToUse.length) {
+      setError("No valid splits found");
+      return;
     }
 
-    if (splitsToUse.length > 0) {
-      addExpenseToList(amount, splitsToUse);
-    }
-  };
+    const { data: expenseData, error: expenseError } = await supabase
+      .from("expenses")
+      .insert([
+        {
+          group_id: group.groupId,
+          description: description.trim(),
+          amount,
+          paid_by: payerId, // <--- use integer here
+          split_type: splitMode,
+        },
+      ])
+      .select("id")
+      .single();
 
+    if (expenseError) throw expenseError;
+
+    const expenseId = expenseData.id;
+
+    const expenseSplits = splitsToUse.map((split) => ({
+      expense_id: expenseId,
+      member_id: split.member_id,
+      amount: split.amount,
+    }));
+
+    const { error: splitsError } = await supabase
+      .from("expense_splits")
+      .insert(expenseSplits);
+
+    if (splitsError) throw splitsError;
+
+// reset form
+    setTotalAmount("");
+    setDescription("");
+    setPaidBy("");
+    setSplits(members.map((m) => ({ name: m.name, selected: true })));
+    setManualSplits(members.map((m) => ({ name: m.name, amount: "" })));
+   setPercentageSplits(members.map((m) => ({ name: m.name, percentage: "" })));
+   setSharesSplits(members.map((m) => ({ name: m.name, shares: 0 })));
+
+    alert(`✅ ${splitMode.toUpperCase()} expense added successfully!`);
+  } catch (error) {
+    console.error("Error adding expense:", error);
+    setError("Failed to add expense. Please try again.");
+  }
+};
+
+
+
+  
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-green-100 p-6 my-6 rounded-xl shadow-lg border border-indigo-200 max-w-2xl mx-auto">
       <h3 className="text-xl font-bold text-black-800 mb-6 pb-2 border-b-2 border-indigo-500">
@@ -167,7 +198,7 @@ function ExpenseSplit({
             onChange={(e) => setTotalAmount(e.target.value)}
           />
         </div>
-
+    
         <div>
           <label className="block text-sm font-medium text-black-700 mb-1">
             Description
@@ -186,17 +217,18 @@ function ExpenseSplit({
             Paid By
           </label>
           <select
-            className="w-full px-4 py-3 border border-black-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-            value={paidBy}
-            onChange={(e) => setPaidBy(e.target.value)}
-          >
-            <option value="">Select Payer</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.name}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+  className="w-full px-4 py-3 border border-black-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+  value={paidBy}
+  onChange={(e) => setPaidBy(e.target.value)}
+>
+  <option value="">Select Payer</option>
+  {members.map((m) => (
+    <option key={m.id} value={m.id}>
+      {m.name}
+    </option>
+  ))}
+</select>
+
         </div>
 
         <div>
@@ -405,11 +437,12 @@ function ExpenseSplit({
                   {exp.description}
                 </div>
                 <div className="text-sm text-black-600 mt-1">
-                  ₹{parseFloat(exp.amount).toFixed(2)} paid by{" "}
-                  <span className="font-semibold text-black-600">
-                    {exp.paid_by}
-                  </span>
-                </div>
+  ₹{parseFloat(exp.amount).toFixed(2)} paid by{" "}
+  <span className="font-semibold text-black-600">
+    {members.find((m) => m.id === exp.paid_by)?.name || exp.paid_by}
+  </span>
+</div>
+
                 <div className="text-sm text-black-600 mt-1">
                   Split among:{" "}
                   {exp.splits &&
