@@ -98,24 +98,17 @@ function ExpenseSplit({
       .filter((s) => s.amount > 0);
   };
 
- const addExpense = async () => {
-  try {
+const addExpense = () => {
     setError("");
 
     if (!totalAmount || !description || !paidBy) {
-      setError("Please fill in all fields");
+      setError("Please fill all fields");
       return;
     }
 
     const amount = parseFloat(totalAmount);
     if (isNaN(amount) || amount <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
-    const payerId = parseInt(paidBy, 10);
-    if (isNaN(payerId)) {
-      setError("Please select a valid payer");
+      setError("Invalid amount");
       return;
     }
 
@@ -130,54 +123,23 @@ function ExpenseSplit({
       return;
     }
 
-    const { data: expenseData, error: expenseError } = await supabase
-      .from("expenses")
-      .insert([
-        {
-          group_id: group.groupId,
-          description: description.trim(),
-          amount,
-          paid_by: payerId, // <--- use integer here
-          split_type: splitMode,
-        },
-      ])
-      .select("id")
-      .single();
+    onAddExpense({
+      description: description.trim(),
+      amount,
+      paid_by: paidBy,
+      split_type: splitMode,
+      splits: splitsToUse,
+    });
 
-    if (expenseError) throw expenseError;
-
-    const expenseId = expenseData.id;
-
-    const expenseSplits = splitsToUse.map((split) => ({
-      expense_id: expenseId,
-      member_id: split.member_id,
-      amount: split.amount,
-    }));
-
-    const { error: splitsError } = await supabase
-      .from("expense_splits")
-      .insert(expenseSplits);
-
-    if (splitsError) throw splitsError;
-
-// reset form
+    // Reset form
     setTotalAmount("");
     setDescription("");
     setPaidBy("");
     setSplits(members.map((m) => ({ name: m.name, selected: true })));
     setManualSplits(members.map((m) => ({ name: m.name, amount: "" })));
-   setPercentageSplits(members.map((m) => ({ name: m.name, percentage: "" })));
-   setSharesSplits(members.map((m) => ({ name: m.name, shares: 0 })));
-
-    alert(`✅ ${splitMode.toUpperCase()} expense added successfully!`);
-  } catch (error) {
-    console.error("Error adding expense:", error);
-    setError("Failed to add expense. Please try again.");
-  }
-};
-
-
-
+    setPercentageSplits(members.map((m) => ({ name: m.name, percentage: "" })));
+    setSharesSplits(members.map((m) => ({ name: m.name, shares: 0 })));
+  };
   
   return (
     <div className="bg-gradient-to-br from-indigo-50 to-green-100 p-6 my-6 rounded-xl shadow-lg border border-indigo-200 max-w-2xl mx-auto">

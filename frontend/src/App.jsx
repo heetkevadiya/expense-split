@@ -77,47 +77,47 @@ function App() {
     setExpenses(formattedExpenses);
   };
 
-  const handleAddExpense = async (newExpense) => {
-    try {
-      const { description, amount, paid_by, splits, split_type } = newExpense;
-      if (!description || !amount || !paid_by || !splits?.length) {
-        alert("Please fill all fields");
-        return;
-      }
-
-      const { data: expenseData, error: expenseError } = await supabase
-        .from("expenses")
-        .insert([
-          {
-            group_id: group.groupId,
-            description,
-            amount,
-            paid_by,
-            split_type,
-          },
-        ])
-        .select("id")
-        .single();
-
-      if (expenseError) throw expenseError;
-
-      const expenseId = expenseData.id;
-      const splitRows = splits.map((split) => ({
-        expense_id: expenseId,
-        member_id: split.member_id,
-        amount: split.amount,
-      }));
-
-      const { error: splitError } = await supabase
-        .from("expense_splits")
-        .insert(splitRows);
-      if (splitError) throw splitError;
-
-      await fetchExpenses(group.groupId);
-    } catch (err) {
-      console.error("Error adding expense:", err);
+const handleAddExpense = async (newExpense) => {
+  try {
+    const { description, amount, paid_by, splits, split_type } = newExpense;
+    if (!description || !amount || !paid_by || !splits?.length) {
+      alert("Please fill all fields");
+      return;
     }
-  };
+
+    const { data: expenseData, error: expenseError } = await supabase
+      .from("expenses")
+      .insert([
+        {
+          group_id: group.groupId,
+          description,
+          amount,
+          paid_by,
+          split_type,
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (expenseError) throw expenseError;
+
+    const expenseId = expenseData.id;
+    const splitRows = splits.map((split) => ({
+      expense_id: expenseId,
+      member_id: split.member_id,
+      amount: split.amount,
+    }));
+
+    const { error: splitError } = await supabase
+      .from("expense_splits")
+      .insert(splitRows);
+    if (splitError) throw splitError;
+
+    await fetchExpenses(group.groupId);
+  } catch (err) {
+    console.error("Error adding expense:", err);
+  }
+};
 
 const handleReset = () => {
   localStorage.clear();

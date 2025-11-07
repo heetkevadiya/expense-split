@@ -26,7 +26,6 @@ function Settlement({ bills, members, onBack, groupId }) {
         .eq("group_id", groupId);
       if (error) throw error;
 
-      // Map member names
       const formattedSettlements = data.map((s) => ({
         ...s,
         payer_name: members.find((m) => m.id === s.from_member_id)?.name || "Unknown",
@@ -35,7 +34,6 @@ function Settlement({ bills, members, onBack, groupId }) {
 
       setExistingSettlements(formattedSettlements);
 
-      // Paid settlements for history
       const paidSettlements = formattedSettlements
         .filter((s) => s.status === "paid")
         .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
@@ -45,7 +43,6 @@ function Settlement({ bills, members, onBack, groupId }) {
     }
   };
 
-  // Calculate settlements based on bills and existing payments
   const calculateOverallSettlements = () => {
     const balances = {};
     members.forEach((m) => (balances[m.name] = 0));
@@ -58,7 +55,6 @@ function Settlement({ bills, members, onBack, groupId }) {
       if (payerName) balances[payerName] += parseFloat(exp.amount);
     });
 
-    // Adjust balances based on existing paid settlements
     existingSettlements
       .filter((s) => s.status === "paid")
       .forEach((s) => {
@@ -92,7 +88,6 @@ function Settlement({ bills, members, onBack, groupId }) {
     setSettlements(newSettlements);
   };
 
-  // Record a payment in Supabase
   const paySettlement = async (from, to, amount) => {
     const fromMember = members.find((m) => m.name === from);
     const toMember = members.find((m) => m.name === to);
@@ -120,7 +115,7 @@ function Settlement({ bills, members, onBack, groupId }) {
     try {
       await paySettlement(from, to, amount);
       alert(`Payment of ₹${amount} from ${from} to ${to} recorded successfully!`);
-      fetchSettlements(); // Refresh settlements after payment
+      fetchSettlements(); 
     } catch (error) {
       console.error("Error recording payment:", error);
       alert(`Failed to record payment: ${error.message}`);
